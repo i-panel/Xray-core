@@ -15,14 +15,29 @@ func (a *Account) AsAccount() (protocol.Account, error) {
 	return a, nil
 }
 
-func (sc *ServerConfig) HasAccount(username, password string) bool {
+func (sc *ServerConfig) HasAccount(username, password string) (bool, string) {
 	if sc.Accounts == nil {
-		return false
+		return false, ""
+	}
+	p :=  ""
+	found := false
+	if username != "" {
+		p, found = sc.Accounts[username]
+		if !found {
+			return false, ""
+		}
+		if p == password {
+			found = true
+		}
+	} else {
+		for n, v := range sc.Accounts {
+			if v == password {
+				username = n
+				found = true
+				break
+			}
+		}
 	}
 
-	p, found := sc.Accounts[username]
-	if !found {
-		return false
-	}
-	return p == password
+	return found, username
 }

@@ -23,7 +23,7 @@ import (
 	"github.com/xtls/xray-core/features/policy"
 	"github.com/xtls/xray-core/features/routing"
 	"github.com/xtls/xray-core/transport/internet/stat"
-)
+	)
 
 // Server is an HTTP proxy server.
 type Server struct {
@@ -78,6 +78,17 @@ func parseBasicAuth(auth string) (username, password string, ok bool) {
 	return cs[:s], cs[s+1:], true
 }
 
+func parseIPAuth(srcIP net.Addr) (username, password string, ok bool) {
+	ipPort := strings.Split(srcIP.String(), ":")
+	ip := net.ParseIP(ipPort[0])
+
+	if ip == nil {
+		return
+	}
+
+	return "", ip.String(), true
+}
+
 type readerOnly struct {
 	io.Reader
 }
@@ -105,10 +116,14 @@ Start:
 		}
 		return trace
 	}
-
+	
 	if len(s.config.Accounts) > 0 {
 		user, pass, ok := parseBasicAuth(request.Header.Get("Proxy-Authorization"))
-		if !ok || !s.config.HasAccount(user, pass) {
+		if !ok {
+			user, pass, ok = parseIPAuth(conn.RemoteAddr())
+		}
+		found, user := s.config.HasAccount(user, pass)
+		if !ok || !found {
 			return common.Error2(conn.Write([]byte("HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"proxy\"\r\n\r\n")))
 		}
 		if inbound != nil {
