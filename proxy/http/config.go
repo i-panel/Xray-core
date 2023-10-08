@@ -1,6 +1,9 @@
 package http
 
 import (
+	"strings"
+	"net"
+	
 	"github.com/xtls/xray-core/common/protocol"
 )
 
@@ -31,10 +34,16 @@ func (sc *ServerConfig) HasAccount(username, password string) (bool, string) {
 		}
 	} else {
 		for n, v := range sc.Accounts {
-			if v == password {
-				username = n
-				found = true
-				break
+			ipPort := strings.Split(v, "|")
+			for _, v2 := range ipPort {
+				if v2 == password {
+					ip := net.ParseIP(v2)
+					if ip != nil {
+						username = n
+						found = true
+					}
+					break
+				}
 			}
 		}
 	}
