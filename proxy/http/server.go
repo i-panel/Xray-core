@@ -29,13 +29,26 @@ import (
 type Server struct {
 	config        *ServerConfig
 	policyManager policy.Manager
+	validator     *Validator
 }
 
 // NewServer creates a new HTTP inbound handler.
 func NewServer(ctx context.Context, config *ServerConfig) (*Server, error) {
+	validator := new(Validator)
+	for _, user := range config.Accounts {
+		u, err := user.ToMemoryUser()
+		if err != nil {
+			return nil, newError("failed to get trojan user").Base(err).AtError()
+		}
+
+		if err := validator.Add(u); err != nil {
+			return nil, newError("failed to add user").Base(err).AtError()
+		}
+	}
 	v := core.MustFromContext(ctx)
 	s := &Server{
 		config:        config,
+		validator:     validator,
 		policyManager: v.GetFeature(policy.ManagerType()).(policy.Manager),
 	}
 
@@ -61,6 +74,16 @@ func isTimeout(err error) bool {
 	return ok && nerr.Timeout()
 }
 
+// AddUser implements proxy.UserManager.AddUser().
+func (s *Server) AddUser(ctx context.Context, u *protocol.MemoryUser) error {
+	return s.validator.Add(u)
+}
+
+// RemoveUser implements proxy.UserManager.RemoveUser().
+func (s *Server) RemoveUser(ctx context.Context, e string) error {
+	return s.validator.Del(e)
+}
+
 func parseBasicAuth(auth string) (username, password string, ok bool) {
 	const prefix = "Basic "
 	if !strings.HasPrefix(auth, prefix) {
@@ -78,15 +101,15 @@ func parseBasicAuth(auth string) (username, password string, ok bool) {
 	return cs[:s], cs[s+1:], true
 }
 
-func parseIPAuth(srcIP net.Addr) (username, password string, ok bool) {
+func parseIPAuth(srcIP net.Addr) (ipstr string, ok bool) {
 	ipPort := strings.Split(srcIP.String(), ":")
 	ip := net.ParseIP(ipPort[0])
 
 	if ip == nil {
-		return
+		return "", false
 	}
 
-	return "", ip.String(), true
+	return ip.String(), true
 }
 
 type readerOnly struct {
@@ -97,8 +120,15 @@ func (s *Server) Process(ctx context.Context, network net.Network, conn stat.Con
 	inbound := session.InboundFromContext(ctx)
 	inbound.Name = "http"
 	inbound.SetCanSpliceCopy(2)
-	inbound.User = &protocol.MemoryUser{
-		Level: s.config.UserLevel,
+	var user *protocol.MemoryUser
+	// inbound.User = &protocol.MemoryUser{
+	// 	Level: s.config.UserLevel,
+	// }
+
+	iConn := conn
+	statConn, ok := iConn.(*stat.CounterConnection)
+	if ok {
+		iConn = statConn.Connection
 	}
 
 	reader := bufio.NewReaderSize(readerOnly{conn}, buf.Size)
@@ -117,19 +147,24 @@ Start:
 		return trace
 	}
 	
-	if len(s.config.Accounts) > 0 {
-		user, pass, ok := parseBasicAuth(request.Header.Get("Proxy-Authorization"))
-		if !ok {
-			user, pass, ok = parseIPAuth(conn.RemoteAddr())
+	// if len(s.config.Accounts) > 0 {
+		username := ""
+		pass := ""
+		ok2 := false
+		username, pass, ok2 = parseBasicAuth(request.Header.Get("Proxy-Authorization"))
+		if !ok2 {
+			username, ok2 = parseIPAuth(conn.RemoteAddr())
 		}
-		found, user := s.config.HasAccount(user, pass)
-		if !ok || !found {
+		
+		user = s.validator.Get(username, pass)
+
+		if user == nil {
 			return common.Error2(conn.Write([]byte("HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"proxy\"\r\n\r\n")))
 		}
 		if inbound != nil {
-			inbound.User.Email = user
+			inbound.User = user
 		}
-	}
+	// }
 
 	newError("request to Method [", request.Method, "] Host [", request.Host, "] with URL [", request.URL, "]").WriteToLog(session.ExportIDToError(ctx))
 	if err := conn.SetReadDeadline(time.Time{}); err != nil {

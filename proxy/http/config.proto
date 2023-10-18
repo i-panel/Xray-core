@@ -6,6 +6,7 @@ option go_package = "github.com/xtls/xray-core/proxy/http";
 option java_package = "com.xray.proxy.http";
 option java_multiple_files = true;
 
+import "common/protocol/user.proto";
 import "common/protocol/server_spec.proto";
 
 message Account {
@@ -16,7 +17,7 @@ message Account {
 // Config for HTTP proxy server.
 message ServerConfig {
   uint32 timeout = 1 [deprecated = true];
-  map<string, string> accounts = 2;
+  repeated xray.common.protocol.User accounts = 2;
   bool allow_transparent = 3;
   uint32 user_level = 4;
 }

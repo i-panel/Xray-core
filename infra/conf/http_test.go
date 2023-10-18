@@ -3,6 +3,8 @@ package conf_test
 import (
 	"testing"
 
+	"github.com/xtls/xray-core/common/protocol"
+	"github.com/xtls/xray-core/common/serial"
 	. "github.com/xtls/xray-core/infra/conf"
 	"github.com/xtls/xray-core/proxy/http"
 )
@@ -27,9 +29,14 @@ func TestHTTPServerConfig(t *testing.T) {
 			}`,
 			Parser: loadJSON(creator),
 			Output: &http.ServerConfig{
-				Accounts: map[string]string{
-					"my-username": "my-password",
-				},
+				Accounts: []*protocol.User{{
+					Level: uint32(1),
+					Email: "my-username",
+					Account: serial.ToTypedMessage(&http.Account{
+						Username: "my-username",
+						Password: "my-password",
+					}),
+				}},
 				AllowTransparent: true,
 				UserLevel:        1,
 				Timeout:          10,

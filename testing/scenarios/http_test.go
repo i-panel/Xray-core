@@ -16,6 +16,7 @@ import (
 	"github.com/xtls/xray-core/common"
 	"github.com/xtls/xray-core/common/buf"
 	"github.com/xtls/xray-core/common/net"
+	"github.com/xtls/xray-core/common/protocol"
 	"github.com/xtls/xray-core/common/serial"
 	"github.com/xtls/xray-core/core"
 	"github.com/xtls/xray-core/proxy/freedom"
@@ -298,9 +299,14 @@ func TestHttpBasicAuth(t *testing.T) {
 					Listen:   net.NewIPOrDomain(net.LocalHostIP),
 				}),
 				ProxySettings: serial.ToTypedMessage(&v2http.ServerConfig{
-					Accounts: map[string]string{
-						"a": "b",
-					},
+					Accounts: []*protocol.User{{
+						Level: uint32(1),
+						Email: "my-username",
+						Account: serial.ToTypedMessage(&v2http.Account{
+							Username: "my-username",
+							Password: "my-password",
+						}),
+					}},
 				}),
 			},
 		},

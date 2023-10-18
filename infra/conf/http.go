@@ -12,7 +12,7 @@ import (
 type HTTPAccount struct {
 	Username string `json:"user"`
 	Password string `json:"pass"`
-}
+	}
 
 func (v *HTTPAccount) Build() *http.Account {
 	return &http.Account{
@@ -36,9 +36,15 @@ func (c *HTTPServerConfig) Build() (proto.Message, error) {
 	}
 
 	if len(c.Accounts) > 0 {
-		config.Accounts = make(map[string]string)
 		for _, account := range c.Accounts {
-			config.Accounts[account.Username] = account.Password
+			config.Accounts= append(config.Accounts, &protocol.User{
+				Level: uint32(config.UserLevel),
+				Email: account.Username,
+				Account: serial.ToTypedMessage(&http.Account{
+					Username: account.Username,
+					Password: account.Password,
+				}),
+			})
 		}
 	}
 
