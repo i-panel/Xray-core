@@ -38,7 +38,7 @@ func NewServer(ctx context.Context, config *ServerConfig) (*Server, error) {
 	for _, user := range config.Accounts {
 		u, err := user.ToMemoryUser()
 		if err != nil {
-			return nil, newError("failed to get trojan user").Base(err).AtError()
+			return nil, newError("failed to get http user").Base(err).AtError()
 		}
 
 		if err := validator.Add(u); err != nil {
