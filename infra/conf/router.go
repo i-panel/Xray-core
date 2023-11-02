@@ -643,50 +643,50 @@ func ParseRule(msg json.RawMessage) (*router.RoutingRule, error) {
 		}
 		return fieldrule, nil
 	}
-	if strings.EqualFold(rawRule.Type, "chinaip") {
-		chinaiprule, err := parseChinaIPRule(msg)
+	if strings.EqualFold(rawRule.Type, "iranip") {
+		iraniprule, err := parseIranIPRule(msg)
 		if err != nil {
-			return nil, newError("invalid chinaip rule").Base(err)
+			return nil, newError("invalid iranip rule").Base(err)
 		}
-		return chinaiprule, nil
+		return iraniprule, nil
 	}
-	if strings.EqualFold(rawRule.Type, "chinasites") {
-		chinasitesrule, err := parseChinaSitesRule(msg)
+	if strings.EqualFold(rawRule.Type, "iransites") {
+		iransitesrule, err := parseIranSitesRule(msg)
 		if err != nil {
 			return nil, newError("invalid chinasites rule").Base(err)
 		}
-		return chinasitesrule, nil
+		return iransitesrule, nil
 	}
 	return nil, newError("unknown router rule type: ", rawRule.Type)
 }
 
-func parseChinaIPRule(data []byte) (*router.RoutingRule, error) {
+func parseIranIPRule(data []byte) (*router.RoutingRule, error) {
 	rawRule := new(RouterRule)
 	err := json.Unmarshal(data, rawRule)
 	if err != nil {
 		return nil, newError("invalid router rule").Base(err)
 	}
-	chinaIPs, err := loadGeoIP("CN")
+	iranIPs, err := loadGeoIP("IR")
 	if err != nil {
-		return nil, newError("failed to load geoip:cn").Base(err)
+		return nil, newError("failed to load geoip:ir").Base(err)
 	}
 	return &router.RoutingRule{
 		TargetTag: &router.RoutingRule_Tag{
 			Tag: rawRule.OutboundTag,
 		},
-		Cidr: chinaIPs,
+		Cidr: iranIPs,
 	}, nil
 }
 
-func parseChinaSitesRule(data []byte) (*router.RoutingRule, error) {
+func parseIranSitesRule(data []byte) (*router.RoutingRule, error) {
 	rawRule := new(RouterRule)
 	err := json.Unmarshal(data, rawRule)
 	if err != nil {
 		return nil, newError("invalid router rule").Base(err).AtError()
 	}
-	domains, err := loadGeositeWithAttr("geosite.dat", "CN")
+	domains, err := loadGeositeWithAttr("geosite.dat", "IR")
 	if err != nil {
-		return nil, newError("failed to load geosite:cn.").Base(err)
+		return nil, newError("failed to load geosite:ir.").Base(err)
 	}
 	return &router.RoutingRule{
 		TargetTag: &router.RoutingRule_Tag{
