@@ -71,6 +71,94 @@ func (m *GeoIPMatcher) match6(ip net.IP) bool {
 	return m.ip6.Contains(nip)
 }
 
+func (m *GeoIPMatcher) GetCountryCode() string {
+	return m.countryCode
+}
+
+// Match returns true if the given ip is included by the GeoIP.
+func (m *GeoIPMatcher) Remove(ips []string) (error, bool) {
+	ip4 := netipx.IPSetBuilder{}
+	ip6 := netipx.IPSetBuilder{}
+	ip4.AddSet(m.ip4)
+	ip6.AddSet(m.ip6)
+	isMatched4 := false
+	isMatched6 := false
+	for _, rip := range ips {
+
+		nip := net.ParseIP(rip)
+		ip, ok := netipx.FromStdIP(nip)
+		if !ok {
+			continue
+		}
+		
+		if ip.Is4() && m.match4(nip) {
+			ip4.Remove(ip)
+			isMatched4 = true
+		} else if ip.Is6() && m.match6(nip) {
+			ip6.Remove(ip)
+			isMatched6 = true
+		}
+	}
+
+	if isMatched4 {
+		ip4 , err := ip4.IPSet()
+		if err != nil {
+			return err, true
+		}
+		m.ip4 = ip4
+	}
+	if isMatched6 {
+		ip6 , err := ip6.IPSet()
+		if err != nil {
+			return err, true
+		}
+		m.ip6 = ip6
+	}
+	return nil, true
+}
+
+// Match returns true if the given ip is included by the GeoIP.
+func (m *GeoIPMatcher) Add(ips []string) (error, bool) {
+	ip4 := netipx.IPSetBuilder{}
+	ip6 := netipx.IPSetBuilder{}
+	ip4.AddSet(m.ip4)
+	ip6.AddSet(m.ip6)
+	is4 := false
+	is6 := false
+	for _, rip := range ips {
+
+		nip := net.ParseIP(rip)
+		ip, ok := netipx.FromStdIP(nip)
+		if !ok {
+			continue
+		}
+		
+		if ip.Is4(){
+			ip4.Add(ip)
+			is4 = true
+		} else if ip.Is6(){
+			ip6.Add(ip)
+			is6 = true
+		}
+	}
+
+	if is4 {
+		ip4 , err := ip4.IPSet()
+		if err != nil {
+			return err, true
+		}
+		m.ip4 = ip4
+	}
+	if is6 {
+		ip6 , err := ip6.IPSet()
+		if err != nil {
+			return err, true
+		}
+		m.ip6 = ip6
+	}
+	return nil, true
+}
+
 // Match returns true if the given ip is included by the GeoIP.
 func (m *GeoIPMatcher) Match(ip net.IP) bool {
 	isMatched := false

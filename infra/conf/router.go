@@ -174,6 +174,10 @@ func ParseIP(s string) (*router.CIDR, error) {
 	}
 }
 
+func LoadGeoIP(file, code string) ([]*router.CIDR, error) {
+	return loadIP(file, code)
+}
+
 func loadGeoIP(code string) ([]*router.CIDR, error) {
 	return loadIP("geoip.dat", code)
 }
@@ -361,6 +365,10 @@ func loadGeositeWithAttr(file string, siteWithAttr string) ([]*router.Domain, er
 	}
 
 	return filteredDomains, nil
+}
+
+func ParseDomainRule(domain string) ([]*router.Domain, error) {
+	return parseDomainRule(domain)
 }
 
 func parseDomainRule(domain string) ([]*router.Domain, error) {
