@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/xtls/xray-core/app/dispatcher"
@@ -24,6 +25,7 @@ var (
 		"vless":         func() interface{} { return new(VLessInboundConfig) },
 		"vmess":         func() interface{} { return new(VMessInboundConfig) },
 		"trojan":        func() interface{} { return new(TrojanServerConfig) },
+		"wireguard":     func() interface{} { return &WireGuardConfig{IsClient: false} },
 	}, "protocol", "settings")
 
 	outboundConfigLoader = NewJSONConfigLoader(ConfigCreatorCache{
@@ -37,7 +39,7 @@ var (
 		"vmess":       func() interface{} { return new(VMessOutboundConfig) },
 		"trojan":      func() interface{} { return new(TrojanClientConfig) },
 		"dns":         func() interface{} { return new(DNSOutboundConfig) },
-		"wireguard":   func() interface{} { return new(WireGuardConfig) },
+		"wireguard":   func() interface{} { return &WireGuardConfig{IsClient: true} },
 	}, "protocol", "settings")
 
 	ctllog = log.New(os.Stderr, "xctl> ", 0)
@@ -187,7 +189,7 @@ func (c *InboundDetourConfig) Build() (*core.InboundHandlerConfig, error) {
 	} else {
 		// Listen on specific IP or Unix Domain Socket
 		receiverSettings.Listen = c.ListenOn.Build()
-		listenDS := c.ListenOn.Family().IsDomain() && (c.ListenOn.Domain()[0] == '/' || c.ListenOn.Domain()[0] == '@')
+		listenDS := c.ListenOn.Family().IsDomain() && (filepath.IsAbs(c.ListenOn.Domain()) || c.ListenOn.Domain()[0] == '@')
 		listenIP := c.ListenOn.Family().IsIP() || (c.ListenOn.Family().IsDomain() && c.ListenOn.Domain() == "localhost")
 		if listenIP {
 			// Listen on specific IP, must set PortList
@@ -487,7 +489,7 @@ func (c *Config) Override(o *Config, fn string) {
 	}
 	// deprecated attrs
 
-	// update the Inbound in slice if the only one in overide config has same tag
+	// update the Inbound in slice if the only one in override config has same tag
 	if len(o.InboundConfigs) > 0 {
 		for i := range o.InboundConfigs {
 			if idx := c.findInboundTag(o.InboundConfigs[i].Tag); idx > -1 {
@@ -502,7 +504,7 @@ func (c *Config) Override(o *Config, fn string) {
 		}
 	}
 
-	// update the Outbound in slice if the only one in overide config has same tag
+	// update the Outbound in slice if the only one in override config has same tag
 	if len(o.OutboundConfigs) > 0 {
 		outboundPrepends := []OutboundDetourConfig{}
 		for i := range o.OutboundConfigs {
