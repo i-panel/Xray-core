@@ -22,6 +22,7 @@
 
 - Linux Script
   - [XTLS/Xray-install](https://github.com/XTLS/Xray-install)
+  - [team-cloudchaser/tempest](https://github.com/team-cloudchaser/tempest) (For Linux without systemd)
 - Docker
   - Official: [ghcr.io/xtls/xray-core](https://ghcr.io/xtls/xray-core) 
   - [iamybj/docker-xray](https://hub.docker.com/r/iamybj/docker-xray)
@@ -124,6 +125,21 @@
 - For third-party projects used in [Xray-core](https://github.com/XTLS/Xray-core), check your local or [the latest go.mod](https://github.com/XTLS/Xray-core/blob/main/go.mod).
 
 ## Compilation
+
+### Windows (PowerShell)
+
+```powershell
+$env:CGO_ENABLED=0
+go build -o xray.exe -trimpath -ldflags "-s -w -buildid=" ./main
+```
+
+### Linux / macOS
+
+```bash
+CGO_ENABLED=0 go build -o xray -trimpath -ldflags "-s -w -buildid=" ./main
+```
+
+### Reproducible Releases
 
 ```bash
 make
