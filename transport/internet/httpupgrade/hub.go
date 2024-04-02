@@ -38,10 +38,10 @@ func (s *server) Handle(conn net.Conn) (stat.Connection, error) {
 	}
 
 	if s.config != nil {
-		host := req.Host
-		if len(s.config.Host) > 0 && host != s.config.Host {
-			return nil, newError("bad host: ", host)
-		}
+		// host := req.Host
+		// if len(s.config.Host) > 0 && host != s.config.Host {
+		// 	return nil, newError("bad host: ", host)
+		// }
 		path := s.config.GetNormalizedPath()
 		if req.URL.Path != path {
 			return nil, newError("bad path: ", req.URL.Path)
