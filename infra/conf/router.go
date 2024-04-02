@@ -8,8 +8,8 @@ import (
 
 	"github.com/xtls/xray-core/app/router"
 	"github.com/xtls/xray-core/common/net"
-	"github.com/xtls/xray-core/common/serial"
 	"github.com/xtls/xray-core/common/platform/filesystem"
+	"github.com/xtls/xray-core/common/serial"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -139,6 +139,7 @@ func (c *RouterConfig) Build() (*router.Config, error) {
 }
 
 type RouterRule struct {
+	RuleTag     string `json:"ruleTag"`
 	Type        string `json:"type"`
 	OutboundTag string `json:"outboundTag"`
 	BalancerTag string `json:"balancerTag"`
@@ -568,6 +569,7 @@ func parseFieldRule(msg json.RawMessage) (*router.RoutingRule, error) {
 	}
 
 	rule := new(router.RoutingRule)
+	rule.RuleTag = rawFieldRule.RuleTag
 	switch {
 	case len(rawFieldRule.OutboundTag) > 0:
 		rule.TargetTag = &router.RoutingRule_Tag{
@@ -671,55 +673,5 @@ func ParseRule(msg json.RawMessage) (*router.RoutingRule, error) {
 		}
 		return fieldrule, nil
 	}
-	if strings.EqualFold(rawRule.Type, "iranip") {
-		iraniprule, err := parseIranIPRule(msg)
-		if err != nil {
-			return nil, newError("invalid iranip rule").Base(err)
-		}
-		return iraniprule, nil
-	}
-	if strings.EqualFold(rawRule.Type, "iransites") {
-		iransitesrule, err := parseIranSitesRule(msg)
-		if err != nil {
-			return nil, newError("invalid chinasites rule").Base(err)
-		}
-		return iransitesrule, nil
-	}
 	return nil, newError("unknown router rule type: ", rawRule.Type)
-}
-
-func parseIranIPRule(data []byte) (*router.RoutingRule, error) {
-	rawRule := new(RouterRule)
-	err := json.Unmarshal(data, rawRule)
-	if err != nil {
-		return nil, newError("invalid router rule").Base(err)
-	}
-	iranIPs, err := loadGeoIP("IR")
-	if err != nil {
-		return nil, newError("failed to load geoip:ir").Base(err)
-	}
-	return &router.RoutingRule{
-		TargetTag: &router.RoutingRule_Tag{
-			Tag: rawRule.OutboundTag,
-		},
-		Cidr: iranIPs,
-	}, nil
-}
-
-func parseIranSitesRule(data []byte) (*router.RoutingRule, error) {
-	rawRule := new(RouterRule)
-	err := json.Unmarshal(data, rawRule)
-	if err != nil {
-		return nil, newError("invalid router rule").Base(err).AtError()
-	}
-	domains, err := loadGeositeWithAttr("geosite.dat", "IR")
-	if err != nil {
-		return nil, newError("failed to load geosite:ir.").Base(err)
-	}
-	return &router.RoutingRule{
-		TargetTag: &router.RoutingRule_Tag{
-			Tag: rawRule.OutboundTag,
-		},
-		Domain: domains,
-	}, nil
 }
